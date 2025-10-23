@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios';
+import serve from './server/serve.js'
 
 // Component to handle in-app notifications/alerts (Added by Gemini)
 const Notification = ({ message, type, clearMessage }) => {
@@ -56,19 +57,26 @@ const Notification = ({ message, type, clearMessage }) => {
     );
 };
 
-const Display = ({ persons, search }) => {
+const Display = ({ persons, search, handleDelete }) => {
     const filterednames = persons.filter(person => person.name.toLowerCase().includes(search.toLowerCase()))
 
     return (
         <ul style={{ padding: '0' }}>
             {filterednames.length > 0 ? (
                 filterednames.map(person => (
-                    <DisplayPerson key={person.id} name={person.name} number={person.number} />))) : (<p style={{ color: '#888', fontStyle: 'italic' }}>No contacts match "{search}". </p>)}
+                    <DisplayPerson 
+                        key={person.id} 
+                        person={person}
+                        handleDelete={handleDelete}
+                    />
+                ))) : (
+                <p style={{ color: '#888', fontStyle: 'italic' }}>No contacts match "{search}". </p>
+            )}
         </ul>
     )
 }
 
-const DisplayPerson = ({ id, name, number }) => {
+const DisplayPerson = ({ person, handleDelete }) => {
     return (
         <li
             style={{
@@ -76,9 +84,28 @@ const DisplayPerson = ({ id, name, number }) => {
                 padding: '8px',
                 borderBottom: '1px dotted #ccc',
                 display: 'flex',
-                justifyContent: 'space-between'
+                justifyContent: 'space-between',
+                alignItems: 'center'
             }}>
-            <span style={{ fontWeight: '500' }}>{name}</span> <span>{number}</span>
+            <div style={{ flexGrow: 1 }}>
+                <span style={{ fontWeight: '500' }}>{person.name}</span> <span>{person.number}</span>
+            </div>
+            
+            <button
+                onClick={() => handleDelete(person.id, person.name)} 
+                style={{
+                    padding: '3px 8px',
+                    backgroundColor: '#e74c3c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    marginLeft: '10px'
+                }}
+            >
+                Delete
+            </button>
         </li>
     )
 }
@@ -113,7 +140,6 @@ const Add = ({ persons, setPersons, showNotification }) => {
     const [newName, setNewName] = useState('')
     const [newNumber, setNewNumber] = useState('')
 
-
     const addPerson = (event) => {
         event.preventDefault()
         const nameTrimmed = newName.trim()
@@ -131,13 +157,25 @@ const Add = ({ persons, setPersons, showNotification }) => {
         if (existingPerson) {
             showNotification(`${nameTrimmed} is already in the phonebook. Number updated.`, 'info')
             const updatedPerson = { ...existingPerson, number: numberTrimmed }
-            const updatedPersons = persons.map(p => p.id !== existingPerson.id ? p : updatedPerson)
-            setPersons(updatedPersons)
+            serve.update(existingPerson.id, updatedPerson)
+                    .then(returnedPerson => {
+                        setPersons(persons.map(p => p.id !== existingPerson.id ? p : returnedPerson))
+                        showNotification(`Updated ${nameTrimmed}'s number.`, 'success')
+                    }).catch(error => {
+                        showNotification(`Error updating ${nameTrimmed}. Person may have already been removed from the server.`, 'error')
+                        personsService.getAll().then(data => setPersons(data));
+            })
         } else {
-            const newId = persons.length > 0 ? Math.max(...persons.map(p => p.id)) + 1 : 1
-            const personObj = { name: nameTrimmed, number: numberTrimmed, id: newId }
-            setPersons(persons.concat(personObj))
-            showNotification(`Added ${nameTrimmed}`, 'success')
+            const personObj = { name: nameTrimmed, number: numberTrimmed}
+            serve.create(personObj)
+                .then(returnedPerson => {
+                    setPersons(persons.concat(returnedPerson)) 
+                    showNotification(`Added ${nameTrimmed}`, 'success')
+                })
+                .catch(error => {
+                    showNotification(`Error adding ${nameTrimmed}. Check server connection.`, 'error')
+                    console.error("Creation error:", error)
+                })
         }
         setNewName('')
         setNewNumber('')
@@ -150,6 +188,7 @@ const Add = ({ persons, setPersons, showNotification }) => {
     const handleNumberChange = (event) => {
         setNewNumber(event.target.value)
     }
+
     return (
         <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
             <h3 style={{ color: '#333', marginBottom: '15px' }}>Add new Contact</h3>
@@ -192,15 +231,40 @@ const Add = ({ persons, setPersons, showNotification }) => {
 
 const App = () => {
     const [persons, setPersons] = useState([])
-    const BASE_URL = 'http://localhost:3001/persons'
-    useEffect(() => {
-        axios.get(BASE_URL).then(response => {
-            console.log('promise fulfilled')
-            setPersons(response.data)})
-    } , [])
-    console.log('render', persons.length, 'persons');
     const [searchName, setSearchName] = useState('')
     const [notification, setNotification] = useState({ message: null, type: null })
+
+    useEffect(() => {
+        serve
+            .getAll()
+            .then(initialPersons => {
+                console.log('promise fulfilled, setting initial persons')
+                setPersons(initialPersons)
+            })
+            .catch(error => {
+                console.error("Failed to fetch initial data:", error);
+                showNotification("Failed to load data from server. Is the server running on port 3002?", 'error');
+            })
+    } , [])
+    
+    const handleDelete = (id, name) => {
+        if (window.confirm(`Delete ${name}?`)) {
+            serve.remove(id)
+                .then(() => {
+                    setPersons(persons.filter(p => p.id !== id))
+                    showNotification(`Deleted ${name}`, 'success')
+                })
+                .catch(error => {
+                    if (error.response && error.response.status === 404) {
+                        showNotification(`${name} was already removed from server.`, 'error')
+                        setPersons(persons.filter(p => p.id !== id))
+                    } else {
+                        showNotification(`Error deleting ${name}. Check server console.`, 'error')
+                        console.error("Deletion error:", error)
+                    }
+                })
+        }
+    }
 
     const showNotification = (message, type) => {
         setNotification({ message, type })
@@ -238,7 +302,7 @@ const App = () => {
 
                 <div style={numbersSectionStyle}>
                     <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>Numbers</h2>
-                    <Display persons={persons} search={searchName} />
+                    <Display persons={persons} search={searchName} handleDelete={handleDelete}/>
                 </div>
             </div>
         </div>
