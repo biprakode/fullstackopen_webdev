@@ -1,4 +1,5 @@
-import { useState , useEffect } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios';
 
 // Component to handle in-app notifications/alerts (Added by Gemini)
 const Notification = ({ message, type, clearMessage }) => {
@@ -55,20 +56,20 @@ const Notification = ({ message, type, clearMessage }) => {
     );
 };
 
-const Display = ({persons , search}) => {
-  const filterednames = persons.filter(person => person.name.toLowerCase().includes(search.toLowerCase()))
+const Display = ({ persons, search }) => {
+    const filterednames = persons.filter(person => person.name.toLowerCase().includes(search.toLowerCase()))
 
     return (
         <ul style={{ padding: '0' }}>
             {filterednames.length > 0 ? (
                 filterednames.map(person => (
-                    <DisplayPerson key={person.id} name={person.name} number={person.number}/>) ) ) : ( <p style={{ color: '#888', fontStyle: 'italic' }}>No contacts match "{search}". </p>)}
+                    <DisplayPerson key={person.id} name={person.name} number={person.number} />))) : (<p style={{ color: '#888', fontStyle: 'italic' }}>No contacts match "{search}". </p>)}
         </ul>
     )
 }
 
-const DisplayPerson = ({id , name , number}) => {
-  return (
+const DisplayPerson = ({ id, name, number }) => {
+    return (
         <li
             style={{
                 listStyleType: 'none',
@@ -82,11 +83,11 @@ const DisplayPerson = ({id , name , number}) => {
     )
 }
 
-const Filter = ({searchName, searchNewName}) => {
-  const handleSearchChange = (event) => {
-    searchNewName(event.target.value)
-  }
-  return (
+const Filter = ({ searchName, searchNewName }) => {
+    const handleSearchChange = (event) => {
+        searchNewName(event.target.value)
+    }
+    return (
         <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f0f4f8' }}>
             <h3 style={{ marginBottom: '10px', color: '#333' }}>Search</h3>
             <form>
@@ -108,47 +109,48 @@ const Filter = ({searchName, searchNewName}) => {
     )
 }
 
-const Add = ({persons, setPersons , showNotification}) => {
-  const [newName, setNewName] = useState('')
-  const [newNumber, setNewNumber] = useState('')
+const Add = ({ persons, setPersons, showNotification }) => {
+    const [newName, setNewName] = useState('')
+    const [newNumber, setNewNumber] = useState('')
 
-  const addPerson = (event) => {
-    event.preventDefault()
-    const nameTrimmed = newName.trim()
-    const numberTrimmed = newNumber.trim()
-    if (!nameTrimmed || !numberTrimmed) {
-      showNotification('Name and number cannot be empty.', 'error')
-      return
-    }
-    const phoneRegex = /^(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
-    if (!phoneRegex.test(numberTrimmed)) {
-      showNotification(`"${numberTrimmed}" is not a valid phone number format.`, 'error')
-      return
-    }
-    const existingPerson = persons.find(p => p.name.toLowerCase() === nameTrimmed.toLowerCase())
-    if (existingPerson) {
-      showNotification(`${nameTrimmed} is already in the phonebook. Number updated.`,'info')
-      const updatedPerson = { ...existingPerson, number: numberTrimmed }
-      const updatedPersons = persons.map(p => p.id !== existingPerson.id ? p : updatedPerson)
-      setPersons(updatedPersons)
-    } else {
-      const newId = persons.length > 0 ? Math.max(...persons.map(p => p.id)) + 1 : 1
-      const personObj = { name: nameTrimmed, number: numberTrimmed, id: newId }
-      setPersons(persons.concat(personObj))
-      showNotification(`Added ${nameTrimmed}`, 'success')
-    }
-    setNewName('')
-    setNewNumber('')
-  }
 
-  const handleNameChange = (event) => {
-    setNewName(event.target.value)
-  }
+    const addPerson = (event) => {
+        event.preventDefault()
+        const nameTrimmed = newName.trim()
+        const numberTrimmed = newNumber.trim()
+        if (!nameTrimmed || !numberTrimmed) {
+            showNotification('Name and number cannot be empty.', 'error')
+            return
+        }
+        const phoneRegex = /^(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/;
+        if (!phoneRegex.test(numberTrimmed)) {
+            showNotification(`"${numberTrimmed}" is not a valid phone number format.`, 'error')
+            return
+        }
+        const existingPerson = persons.find(p => p.name.toLowerCase() === nameTrimmed.toLowerCase())
+        if (existingPerson) {
+            showNotification(`${nameTrimmed} is already in the phonebook. Number updated.`, 'info')
+            const updatedPerson = { ...existingPerson, number: numberTrimmed }
+            const updatedPersons = persons.map(p => p.id !== existingPerson.id ? p : updatedPerson)
+            setPersons(updatedPersons)
+        } else {
+            const newId = persons.length > 0 ? Math.max(...persons.map(p => p.id)) + 1 : 1
+            const personObj = { name: nameTrimmed, number: numberTrimmed, id: newId }
+            setPersons(persons.concat(personObj))
+            showNotification(`Added ${nameTrimmed}`, 'success')
+        }
+        setNewName('')
+        setNewNumber('')
+    }
 
-  const handleNumberChange = (event) => {
-    setNewNumber(event.target.value)
-  }
-  return (
+    const handleNameChange = (event) => {
+        setNewName(event.target.value)
+    }
+
+    const handleNumberChange = (event) => {
+        setNewNumber(event.target.value)
+    }
+    return (
         <div style={{ marginBottom: '20px', padding: '15px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9' }}>
             <h3 style={{ color: '#333', marginBottom: '15px' }}>Add new Contact</h3>
             <form onSubmit={addPerson} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -189,24 +191,26 @@ const Add = ({persons, setPersons , showNotification}) => {
 }
 
 const App = () => {
-  const [persons, setPersons] = useState([
-    { name: 'Arto Hellas', number: '040123456', id: 1 },
-    { name: 'Ada Lovelace', number: '39445323523', id: 2 },
-    { name: 'Dan Abramov', number: '1243234345', id: 3 },
-    { name: 'Mary Poppendieck', number: '39236423122', id: 4 }
-  ]) 
-  const [searchName, setSearchName] = useState('')
-  const [notification, setNotification] = useState({ message: null, type: null })
+    const [persons, setPersons] = useState([])
+    const BASE_URL = 'http://localhost:3001/persons'
+    useEffect(() => {
+        axios.get(BASE_URL).then(response => {
+            console.log('promise fulfilled')
+            setPersons(response.data)})
+    } , [])
+    console.log('render', persons.length, 'persons');
+    const [searchName, setSearchName] = useState('')
+    const [notification, setNotification] = useState({ message: null, type: null })
 
-  const showNotification = (message, type) => {
-      setNotification({ message, type })
-  }
+    const showNotification = (message, type) => {
+        setNotification({ message, type })
+    }
 
-  const clearMessage = () => {
-      setNotification({ message: null, type: null })
-  }
+    const clearMessage = () => {
+        setNotification({ message: null, type: null })
+    }
 
-  const appStyle = {
+    const appStyle = {
         maxWidth: '600px',
         margin: '30px auto',
         padding: '25px',
@@ -222,23 +226,23 @@ const App = () => {
         paddingTop: '20px'
     };
 
-  return (
-    <div style={{backgroundColor: '#87ceeb' , margin: '0' , minHeight: '100vh'}}>
-      <div style={appStyle}>
-        <h1 style={{ color: '#2c3e50', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>Phonebook</h1>
-        <Notification {...notification} clearMessage={clearMessage} />
+    return (
+        <div style={{ backgroundColor: '#87ceeb', margin: '0', minHeight: '100vh' }}>
+            <div style={appStyle}>
+                <h1 style={{ color: '#2c3e50', borderBottom: '1px solid #eee', paddingBottom: '10px' }}>Phonebook</h1>
+                <Notification {...notification} clearMessage={clearMessage} />
 
-        <Filter searchName={searchName} searchNewName={setSearchName} />
+                <Filter searchName={searchName} searchNewName={setSearchName} />
 
-        <Add persons={persons} setPersons={setPersons} showNotification={showNotification} />
+                <Add persons={persons} setPersons={setPersons} showNotification={showNotification} />
 
-        <div style={numbersSectionStyle}>
-            <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>Numbers</h2>
-            <Display persons={persons} search={searchName} />
+                <div style={numbersSectionStyle}>
+                    <h2 style={{ color: '#2c3e50', marginBottom: '15px' }}>Numbers</h2>
+                    <Display persons={persons} search={searchName} />
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  )
+    )
 }
 
 export default App
