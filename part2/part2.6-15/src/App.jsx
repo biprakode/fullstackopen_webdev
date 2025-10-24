@@ -29,12 +29,7 @@ const Notification = ({ message, type, clearMessage }) => {
         style.color = '#004085';
     }
 
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            clearMessage();
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, [message, clearMessage]);
+    useEffect(() => {const timer = setTimeout(() => { clearMessage() }, 3000); return () => clearTimeout(timer) }, [message, clearMessage]);
 
     return (
         <div style={style}>
@@ -245,7 +240,7 @@ const App = () => {
                 console.error("Failed to fetch initial data:", error);
                 showNotification("Failed to load data from server. Is the server running on port 3002?", 'error');
             })
-    } , [])
+    } , []) // empty array to run effect only once
     
     const handleDelete = (id, name) => {
         if (window.confirm(`Delete ${name}?`)) {
