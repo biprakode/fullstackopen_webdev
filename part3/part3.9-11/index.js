@@ -51,7 +51,7 @@ app.post('/api/persons' , async (req , res) => {
     })
 })
 
-app.put('api/persons/:id' , (req , res , next) => {
+app.put('/api/persons/:id' , (req , res , next) => {
   const body = req.body
     if (!body.name || !body.number) {
         return res.status(400).json({ error: 'name or number missing' })
