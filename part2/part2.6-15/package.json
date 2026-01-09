@@ -5,16 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "node node_modules/vite/bin/vite.js",
-    "build": "vite build",
+    "build": "node node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node final-server.cjs"
   },
   "dependencies": {
     "axios": "^1.12.2",
-    "mocker-api": "^3.0.2",
+    "express": "^5.2.1",
+    "mocker-api": "^1.12.1",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "tailwind": "^2.3.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
