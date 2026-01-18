@@ -1,8 +1,6 @@
 require('dotenv').config()
 const express = require('express')
-const path = require('path')
 const Person = require('./models/person')
-const person = require('./models/person')
 
 const app = express()
 app.use(express.json())
@@ -36,7 +34,7 @@ app.get('/api/persons/:id', (req, res, next) => {
   .catch(error => next(error))
 })
 
-app.post('/api/persons' , async (req , res) => {
+app.post('/api/persons' , async (req , res , next) => {
     const body = req.body
     if (!body.name || !body.number) {
         return res.status(400).json({ error: 'name or number missing' })
@@ -46,9 +44,11 @@ app.post('/api/persons' , async (req , res) => {
       name: body.name,
       number: body.number,
     })
-    person.save().then(savedPerson => {
+    person.save()
+    .then(savedPerson => {
       res.json(savedPerson)
     })
+  .catch(error => next(error))
 })
 
 app.put('/api/persons/:id' , (req , res , next) => {
@@ -63,7 +63,7 @@ app.put('/api/persons/:id' , (req , res , next) => {
     }
     person.name = body.name
     person.number = body.number
-  
+
     return person.save().then((
       savedPerson => {
         res.json(savedPerson)
@@ -85,6 +85,8 @@ const errorHandler = (error, req, res, next) => {
 
   if (error.name === 'CastError') {
     return res.status(400).send({ error: 'malformatted id' })
+  } else if (error.name === 'ValidationError') {
+    return res.status(400).json({error : error.message})
   }
   next(error)
 }
